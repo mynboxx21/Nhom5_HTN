@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MQTT Dashboard</title>
+  <link rel="stylesheet" href="subscriber.css" />
+  <script src="https://unpkg.com/mqtt@5.0.0/dist/mqtt.min.js"></script>
+  <!-- Chart.js for charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div>
+        <h1 class="title">🌿 Smart Garden Dashboard</h1>
+        <p class="subtitle">Khuyên - Ngân - Vũ</p>
+      </div>
+      <nav class="nav-tabs">
+        <button id="tab-values" class="tab active">Values</button>
+        <button id="tab-charts" class="tab">Charts</button>
+        <button id="clear_data" class="clear">Clear</button>
+      </nav>
+    </header>
+
+    <div class="wrapper">
+      <!-- PAGE: Values -->
+      <section id="page-values" class="page">
+        <div class="form-row">
+          <label for="topic">Topic</label>
+          <input type="text" id="topic" placeholder="Enter MQTT Topic..." />
+        </div>
+
+        <div class="form-row">
+          <label for="message">Message</label>
+          <textarea id="message" rows="4" readonly placeholder="Messages will appear here..."></textarea>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="card-label">Temperature</div>
+            <div class="card-value">
+              <input type="text" id="temperature" readonly />
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">Humidity (air)</div>
+            <div class="card-value">
+              <input type="text" id="humidity" readonly />
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">Soil Moisture</div>
+            <div class="card-value">
+              <input type="text" id="soil_moisture" readonly />
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">Light (lux_status)</div>
+            <div class="card-value">
+              <!-- keep the existing input id for backward compatibility (hidden by CSS) -->
+              <input type="text" id="lux_status" readonly />
+              <!-- Gauge (đồng hồ đo ánh sáng) -->
+              <div id="lux_gauge_wrapper">
+                <svg id="lux_gauge" viewBox="0 0 36 36" class="circular-chart">
+                  <path class="circle-bg"
+                        d="M18 2.0845
+                           a 15.9155 15.9155 0 0 1 0 31.831
+                           a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  <path id="lux_gauge_bar" class="circle"
+                        stroke-dasharray="0,100"
+                        d="M18 2.0845
+                           a 15.9155 15.9155 0 0 1 0 31.831
+                           a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  <text id="lux_gauge_val" x="18" y="20.35" class="percentage">0%</text>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- ADDED: status cards for pumps (so JS can update pump states visually) -->
+          <div class="card">
+            <div class="card-label">Fan Status</div>
+            <div class="card-value">
+              <input type="text" id="fan" readonly />
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">Pump Status</div>
+            <div class="card-value">
+              <input type="text" id="pump" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="status">Status</label>
+          <input type="text" id="status" readonly />
+        </div>
+
+        <!-- Row 1: Subscribe / Unsubscribe (unchanged — vẫn ở hàng đầu tiên) -->
+        <div class="form-row btn-container">
+          <button id="subscribe">Subscribe</button>
+          <button id="unsubscribe">Unsubscribe</button>
+        </div>
+
+        <!-- Row 2: LED ON / LED OFF  + PUMP01 ON/OFF + PUMP ON/OFF (đã thêm pump buttons) -->
+        <div class="form-row btn-container">
+          <button id="led_on">LED ON</button>
+          <button id="led_off">LED OFF</button>
+
+          <!-- ADDED: pump01 buttons (nằm cùng hàng với led buttons) -->
+          <button id="fan_on">FAN ON</button> <!-- ADDED -->
+          <button id="fan_off">FAN OFF</button> <!-- ADDED -->
+
+          <!-- ADDED: pump buttons (nằm cùng hàng với led buttons) -->
+          <button id="pump_on">PUMP ON</button> <!-- ADDED -->
+          <button id="pump_off">PUMP OFF</button> <!-- ADDED -->
+        </div>
+        <!-- AUTO control row (ADD) -->
+<div class="form-row btn-container" id="auto_controls_row">
+  <!-- Fan auto controls (controls pump01 by temp) -->
+  <label style="width:auto; align-self:center; font-weight:700; color:#274463; margin-right:8px;">Fan Auto</label>
+  <label class="switch">
+    <input id="fan_auto_toggle" type="checkbox" />
+    <span class="slider"></span>
+  </label>
+
+  <!-- Pump auto (soil) -->
+  <label style="width:auto; align-self:center; font-weight:700; color:#274463; margin-left:12px; margin-right:8px;">Pump Auto</label>
+  <label class="switch">
+    <input id="pump_auto_toggle" type="checkbox" />
+    <span class="slider"></span>
+  </label>
+
+  <!-- Light auto (lux) -->
+  <label style="width:auto; align-self:center; font-weight:700; color:#274463; margin-left:12px; margin-right:8px;">Light Auto</label>
+  <label class="switch">
+    <input id="light_auto_toggle" type="checkbox" />
+    <span class="slider"></span>
+  </label>
+</div>
+<!-- /AUTO control row (ADD) -->
+
+      </section>
+
+      <!-- PAGE: Charts -->
+      <section id="page-charts" class="page" style="display:none;">
+        <div class="chart-row">
+          <div class="chart-card">
+            <div class="chart-title">Temperature (°C)</div>
+            <canvas id="chartTemp" width="400" height="200"></canvas>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">Humidity (%) — Air (blue) & Soil (brown)</div>
+            <canvas id="chartHum" width="400" height="200"></canvas>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">Light (lux_status)</div>
+            <canvas id="chartLight" width="400" height="200"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-controls">
+          <label>Auto-sample every:
+            <select id="sampleInterval">
+              <option value="5000">5s</option>
+              <option value="10000">10s</option>
+              <option value="30000">30s</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Data table -->
+        <div class="table-wrapper">
+          <h3>Data Records</h3>
+          <table id="dataTable">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Temperature (°C)</th>
+                <th>Air Humidity (%)</th>
+                <th>Soil Moisture (%)</th>
+                <th>Light (lux_status)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- rows appended here -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- subscriber.js maintains MQTT connect & parsing -->
+  <script src="subscriber.js"></script>
+
+  <!-- REPLACE the inline script that handles charts/table/storage with this block -->
+<script>
+  // Tabs
+  const tabValues = document.querySelector('#tab-values');
+  const tabCharts = document.querySelector('#tab-charts');
+  const pageValues = document.querySelector('#page-values');
+  const pageCharts = document.querySelector('#page-charts');
+
+  tabValues.addEventListener('click', () => {
+    tabValues.classList.add('active');
+    tabCharts.classList.remove('active');
+    pageValues.style.display = '';
+    pageCharts.style.display = 'none';
+  });
+  tabCharts.addEventListener('click', () => {
+    tabCharts.classList.add('active');
+    tabValues.classList.remove('active');
+    pageCharts.style.display = '';
+    pageValues.style.display = 'none';
+  });
+
+  // Timestamp formatting DD-MM-YY HH:mm:ss
+  function pad2(n) { return n < 10 ? '0' + n : String(n); }
+  function formatTimestamp(date) {
+    const d = pad2(date.getDate());
+    const m = pad2(date.getMonth() + 1);
+    const yy = String(date.getFullYear()).slice(-2);
+    const hh = pad2(date.getHours());
+    const min = pad2(date.getMinutes());
+    const sec = pad2(date.getSeconds());
+    return `${d}-${m}-${yy} ${hh}:${min}:${sec}`;
+  }
+
+  // Extract short label HH:mm from a full timestamp string "DD-MM-YY HH:mm:ss"
+  function shortLabelFromFullTs(tsFull) {
+    try {
+      const parts = String(tsFull).split(' ');
+      if (parts.length >= 2) {
+        return parts[1].slice(0,5); // "HH:mm"
+      }
+    } catch (e) {}
+    // fallback: return current time HH:mm
+    const now = new Date();
+    return pad2(now.getHours()) + ':' + pad2(now.getMinutes());
+  }
+
+  // CHARTS & DATA logic
+  const maxPoints = 60;
+  const labels = [];
+  const tempData = [];
+  const humAirData = [];
+  const soilData = [];
+  const luxData = [];
+
+  // Chart contexts
+  const ctxTemp = document.getElementById('chartTemp').getContext('2d');
+  const ctxHum = document.getElementById('chartHum').getContext('2d');
+  const ctxLight = document.getElementById('chartLight').getContext('2d');
+
+  // Temperature chart
+  const chartTemp = new Chart(ctxTemp, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Temp (°C)',
+        data: tempData,
+        borderColor: '#ff595e',
+        backgroundColor: 'rgba(255,89,94,0.12)',
+        tension: 0.25,
+        fill: true,
+        pointRadius: 2,
+        borderWidth: 2
+      }]
+    },
+    options: { responsive: true, scales: { x: { display: true }, y: { beginAtZero: false } } }
+  });
+
+  // Humidity chart with two datasets: air (blue) and soil (brown)
+  const chartHum = new Chart(ctxHum, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Air Humidity (%)',
+          data: humAirData,
+          borderColor: '#2b8cff',
+          backgroundColor: 'rgba(43,140,255,0.12)',
+          tension: 0.25,
+          fill: true,
+          pointRadius: 2,
+          borderWidth: 2
+        },
+        {
+          label: 'Soil Moisture (%)',
+          data: soilData,
+          borderColor: '#8b5a2b',
+          backgroundColor: 'rgba(139,90,43,0.12)',
+          tension: 0.25,
+          fill: true,
+          pointRadius: 2,
+          borderWidth: 2
+        }
+      ]
+    },
+    options: { responsive: true, scales: { x: { display: true }, y: { beginAtZero: true } } }
+  });
+
+  // Light chart (yellow)
+  const chartLight = new Chart(ctxLight, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Light (lux_status)',
+        data: luxData,
+        borderColor: '#f6c84c',
+        backgroundColor: 'rgba(246,200,76,0.12)',
+        tension: 0.25,
+        fill: true,
+        pointRadius: 2,
+        borderWidth: 2
+      }]
+    },
+    options: { responsive: true, scales: { x: { display: true }, y: { beginAtZero: true } } }
+  });
+
+  // helper parse value from input like "25.4 °C" or "60 %" or plain number
+  function parseNumericFromInput(str) {
+    if (!str) return NaN;
+    const m = str.toString().match(/-?\d+(\.\d+)?/);
+    return m ? parseFloat(m[0]) : NaN;
+  }
+
+  // last recorded values to detect changes (init null)
+  let lastRecorded = { t: null, h: null, soil: null, lux: null };
+
+  // Storage key
+  const STORAGE_KEY = 'sg_data_records_v1';
+
+  // Load stored records from localStorage and populate table & charts
+  function loadStoredData() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr) || arr.length === 0) return;
+
+      // clear existing arrays
+      labels.length = 0; tempData.length = 0; humAirData.length = 0; soilData.length = 0; luxData.length = 0;
+      const tbody = document.querySelector('#dataTable tbody');
+      if (tbody) tbody.innerHTML = '';
+
+      // append in chronological order (old -> new)
+      arr.forEach((rec) => {
+        // create row
+        const tr = document.createElement('tr');
+
+        // TIME cell: show timestamp string directly (or '-' if missing)
+        const tdTime = document.createElement('td');
+        tdTime.innerText = (rec.ts === null || rec.ts === undefined || rec.ts === '') ? '-' : rec.ts;
+        tr.appendChild(tdTime);
+
+        const tdT = document.createElement('td');
+        tdT.innerText = (rec.t === -999) ? 'N/A' : (rec.t === null || rec.t === undefined ? '-' : Number(rec.t).toFixed(2));
+        tr.appendChild(tdT);
+
+        const tdH = document.createElement('td');
+        tdH.innerText = (rec.h === null || rec.h === undefined) ? '-' : Number(rec.h).toFixed(2);
+        tr.appendChild(tdH);
+
+        const tdSoil = document.createElement('td');
+        tdSoil.innerText = (rec.soil === null || rec.soil === undefined) ? '-' : Number(rec.soil).toFixed(0);
+        tr.appendChild(tdSoil);
+
+        const tdLux = document.createElement('td');
+        tdLux.innerText = (rec.lux === null || rec.lux === undefined) ? '-' : Number(rec.lux).toFixed(0);
+        tr.appendChild(tdLux);
+
+        if (tbody) tbody.appendChild(tr);
+
+        // push chart arrays using short label HH:mm
+        const shortLabel = shortLabelFromFullTs(rec.ts);
+        labels.push(shortLabel);
+        tempData.push(isNaN(rec.t) ? null : rec.t);
+        humAirData.push(isNaN(rec.h) ? null : rec.h);
+        soilData.push(isNaN(rec.soil) ? null : rec.soil);
+        luxData.push(isNaN(rec.lux) ? null : rec.lux);
+
+        // update lastRecorded as we go (final values will be last record)
+        lastRecorded.t = (rec.t === null || rec.t === undefined) ? null : rec.t;
+        lastRecorded.h = (rec.h === null || rec.h === undefined) ? null : rec.h;
+        lastRecorded.soil = (rec.soil === null || rec.soil === undefined) ? null : rec.soil;
+        lastRecorded.lux = (rec.lux === null || rec.lux === undefined) ? null : rec.lux;
+      });
+
+      // After load, update charts
+      if (chartTemp) chartTemp.update();
+      if (chartHum) chartHum.update();
+      if (chartLight) chartLight.update();
+    } catch (err) {
+      console.log('loadStoredData error', err);
+    }
+  }
+
+  // Save a record array into localStorage
+  function saveRecordToStorage(rec) {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      let arr = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(arr)) arr = [];
+      arr.push(rec);
+      if (arr.length > 1000) arr = arr.slice(arr.length - 1000);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+    } catch (err) {
+      console.log('saveRecordToStorage error', err);
+    }
+  }
+
+  // Add a new row to data table (prepend)
+  function addDataRow(timestamp, t, h, soil, lux) {
+    const tbody = document.querySelector('#dataTable tbody');
+    if (!tbody) return;
+    const tr = document.createElement('tr');
+
+    // TIME cell: show formatted timestamp string directly
+    const tdTime = document.createElement('td');
+    tdTime.innerText = (timestamp === null || timestamp === undefined || timestamp === '') ? '-' : timestamp;
+    tr.appendChild(tdTime);
+
+    const tdT = document.createElement('td');
+    tdT.innerText = (t === -999) ? 'N/A' : (isNaN(t) ? (t === null ? '-' : String(t)) : Number(t).toFixed(2));
+    tr.appendChild(tdT);
+
+    const tdH = document.createElement('td');
+    tdH.innerText = (isNaN(h) ? (h === null ? '-' : String(h)) : Number(h).toFixed(2));
+    tr.appendChild(tdH);
+
+    const tdSoil = document.createElement('td');
+    tdSoil.innerText = (isNaN(soil) ? (soil === null ? '-' : String(soil)) : Number(soil).toFixed(0));
+    tr.appendChild(tdSoil);
+
+    const tdLux = document.createElement('td');
+    tdLux.innerText = (isNaN(lux) ? (lux === null ? '-' : String(lux)) : Number(lux).toFixed(0));
+    tr.appendChild(tdLux);
+
+    // prepend newest on top
+    if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
+    else tbody.appendChild(tr);
+
+    // also save into localStorage
+    const rec = {
+      ts: timestamp,
+      t: (isNaN(t) ? null : t),
+      h: (isNaN(h) ? null : h),
+      soil: (isNaN(soil) ? null : soil),
+      lux: (isNaN(lux) ? null : lux)
+    };
+    saveRecordToStorage(rec);
+  }
+
+  // Push new points into charts (and maintain maxPoints)
+  // Accept tsFull (DD-MM-YY HH:mm:ss) and compute short label HH:mm for chart
+  function pushChartPoints(tsFull, tVal, hVal, soilVal, luxVal) {
+    const shortLabel = shortLabelFromFullTs(tsFull);
+    if (labels.length >= maxPoints) labels.shift();
+    labels.push(shortLabel);
+
+    function pushAndTrim(arr, val) {
+      if (arr.length >= maxPoints) arr.shift();
+      arr.push((isNaN(val) ? null : val));
+    }
+
+    pushAndTrim(tempData, tVal);
+    pushAndTrim(humAirData, hVal);
+    pushAndTrim(soilData, soilVal);
+    pushAndTrim(luxData, luxVal);
+
+    chartTemp.update();
+    chartHum.update();
+    chartLight.update();
+  }
+
+  // Update gauge (lux)
+  function updateLuxGauge(percent) {
+    const valEl = document.getElementById('lux_gauge_val');
+    const bar = document.getElementById('lux_gauge_bar');
+    if (!bar || !valEl) return;
+    let p = Number(percent);
+    if (isNaN(p)) p = 0;
+    if (p < 0) p = 0;
+    if (p > 100) p = 100;
+    const dash = (p * 100) / 100;
+    bar.setAttribute('stroke-dasharray', `${dash},100`);
+    valEl.textContent = `${Math.round(p)}%`;
+  }
+
+  // Called when new values arrive (either from MQTT parse or sampling)
+  /*window.handleNewIncomingData = function(triggerSource = 'mqtt') {
+    const t = parseNumericFromInput(document.querySelector('#temperature')?.value);
+    const h = parseNumericFromInput(document.querySelector('#humidity')?.value);
+    const soil = parseNumericFromInput(document.querySelector('#soil_moisture')?.value);
+    const lux = parseNumericFromInput(document.querySelector('#lux_status')?.value);
+
+    if (!isNaN(lux)) updateLuxGauge(lux);
+
+    function changed(a, b) {
+      if (a === null && b === null) return false;
+      if (a === null || b === null) return true;
+      if (isNaN(a) && isNaN(b)) return false;
+      if (isNaN(a) || isNaN(b)) return true;
+      return Math.abs(a - b) > 0.05;
+    }
+
+    const isChanged = changed(t, lastRecorded.t) || changed(h, lastRecorded.h) || changed(soil, lastRecorded.soil) || changed(lux, lastRecorded.lux);
+
+    if (isChanged) {
+      const tsFull = formatTimestamp(new Date()); // DD-MM-YY HH:mm:ss
+      addDataRow(tsFull, t, h, soil, lux);        // table shows full timestamp
+      pushChartPoints(tsFull, t, h, soil, lux);  // charts get short label HH:mm
+      lastRecorded.t = (isNaN(t)? null : t);
+      lastRecorded.h = (isNaN(h)? null : h);
+      lastRecorded.soil = (isNaN(soil)? null : soil);
+      lastRecorded.lux = (isNaN(lux)? null : lux);
+    }
+  };*/
+  // Called when new values arrive (either from MQTT parse or sampling)
+// Called when new values arrive (either from MQTT parse or sampling)
+// NOTE: This version records / updates the table & charts ONLY when called with 'sample' (or 'force'/'clear').
+// Incoming MQTT updates will still update the on-screen inputs and gauge, but will NOT append a data record
+// nor update the charts unless the sampler triggers it.
+window.handleNewIncomingData = function(triggerSource = 'mqtt') {
+  // read current displayed values (these are updated by subscriber.js when MQTT arrives)
+  const t = parseNumericFromInput(document.querySelector('#temperature')?.value);
+  const h = parseNumericFromInput(document.querySelector('#humidity')?.value);
+  const soil = parseNumericFromInput(document.querySelector('#soil_moisture')?.value);
+  const lux = parseNumericFromInput(document.querySelector('#lux_status')?.value);
+
+  // always update the visual lux gauge if we have a numeric value
+  if (!isNaN(lux)) updateLuxGauge(lux);
+
+  // Only when triggered by the sampler (or an explicit force/clear) do we record a row and update charts.
+  // This removes any "record-on-change" behaviour.
+  const isSampleTick = (String(triggerSource).toLowerCase() === 'sample');
+  const isForce = (String(triggerSource).toLowerCase() === 'force' || String(triggerSource).toLowerCase() === 'clear');
+
+  if (isSampleTick || isForce) {
+    const tsFull = formatTimestamp(new Date()); // DD-MM-YY HH:mm:ss
+
+    // add to visible table and charts
+    addDataRow(tsFull, t, h, soil, lux);        // table shows full timestamp
+    pushChartPoints(tsFull, t, h, soil, lux);  // charts get short label HH:mm
+
+    // update lastRecorded so later logic (if any) remains consistent
+    try {
+      lastRecorded.t = (isNaN(t) ? null : t);
+      lastRecorded.h = (isNaN(h) ? null : h);
+      lastRecorded.soil = (isNaN(soil) ? null : soil);
+      lastRecorded.lux = (isNaN(lux) ? null : lux);
+    } catch (e) {
+      // ignore
+    }
+  }
+  // If not sample tick, do nothing further: inputs updated by MQTT remain visible but no record is saved.
+};
+
+
+
+  // Sampling to update charts periodically (reads inputs)
+  /*let sampleTimer = null;
+  function startSampling(interval) {
+    if (sampleTimer) clearInterval(sampleTimer);
+    sampleTimer = setInterval(() => {
+      window.handleNewIncomingData('sample');
+    }, interval);
+  }
+
+  // init sampling from select
+  const sampleIntervalSelect = document.querySelector('#sampleInterval');
+  startSampling(parseInt(sampleIntervalSelect.value));
+  sampleIntervalSelect.addEventListener('change', (e) => {
+    startSampling(parseInt(e.target.value));
+  });*/
+  // --- Sampling (single global timer controlled by the select) ---
+/* Ensure sampleTimer lives in the outer scope so no duplicate timers are created */
+let sampleTimer = null;
+
+/**
+ * Start / restart sampling interval.
+ * intervalMs must be a positive integer (milliseconds). If invalid, default to 5000.
+ * This function always clears any previous sampling timer before creating a new one.
+ */
+function startSampling(intervalMs) {
+  try {
+    // normalize
+    let ms = parseInt(intervalMs, 10);
+    if (isNaN(ms) || ms <= 0) ms = 5000;
+
+    // if already running with same interval, do nothing (avoid restart churn)
+    if (sampleTimer && sampleTimer._intervalMs === ms) {
+      console.log('[Sampling] already running with interval', ms, 'ms — no change');
+      return;
+    }
+
+    // clear previous timer if any
+    if (sampleTimer) {
+      clearInterval(sampleTimer);
+      sampleTimer = null;
+      console.log('[Sampling] previous timer cleared');
+    }
+
+    // set new interval and attach a meta property _intervalMs so we can compare later
+    sampleTimer = setInterval(() => {
+      try {
+        // call sampling with explicit trigger 'sample' so handleNewIncomingData will force-save
+        if (typeof window.handleNewIncomingData === 'function') {
+          window.handleNewIncomingData('sample');
+        }
+      } catch (e) {
+        console.log('[Sampling] error executing sample tick', e);
+      }
+    }, ms);
+
+    // attach meta so we can check same-interval later
+    sampleTimer._intervalMs = ms;
+    console.log('[Sampling] started with interval', ms, 'ms');
+  } catch (err) {
+    console.warn('[Sampling] startSampling error', err);
+  }
+}
+
+// Hook up the select element reliably (may run before DOMContentLoaded depending on script order)
+const sampleIntervalSelect = document.querySelector('#sampleInterval');
+if (sampleIntervalSelect) {
+  // Start sampling using the current selected value (convert to int)
+  startSampling(parseInt(sampleIntervalSelect.value, 10));
+
+  // When user changes the select, restart sampling with the new value
+  sampleIntervalSelect.addEventListener('change', (e) => {
+    const val = parseInt(e.target.value, 10);
+    startSampling(val);
+  });
+} else {
+  // If the select isn't found (unexpected), start with safe default 5000 ms
+  console.warn('[Sampling] #sampleInterval not found — using default 5000ms');
+  startSampling(5000);
+}
+
+
+  // Ensure gauge initial render & load stored data after DOM
+  document.addEventListener('DOMContentLoaded', () => {
+    const initLux = parseNumericFromInput(document.querySelector('#lux_status')?.value);
+    updateLuxGauge(initLux || 0);
+    loadStoredData();
+  });
+
+</script>
+</body>
+</html>
