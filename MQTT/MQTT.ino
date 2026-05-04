@@ -27,9 +27,9 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 #define FAN_PIN 15      
 #define PUMP_PIN 4       
 #define DHTPIN 25
-#define DHTTYPE DHT11     // pin độ ẩm không khí, nhiệt độ
-#define SOIL_PIN 34       // pin cảm biến độ ẩm đất
-#define LDR_PIN 35        // pin cảm biến ánh sáng
+#define DHTTYPE DHT11    
+#define SOIL_PIN 34       
+#define LDR_PIN 35        
 
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -159,7 +159,7 @@ void reconnect() {
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 2s");
-      delay(1000);
+      vTaskDelay(pdMS_TO_TICKS(1000));
     }
   }
 }
@@ -304,13 +304,13 @@ lcd.setCursor(0,0);
 lcd.print("Smart Garden");
 lcd.setCursor(0,1);
 lcd.print("Init...");
-delay(800);
+vTaskDelay(pdMS_TO_TICKS(800));
 lcd.clear();
   analogReadResolution(12);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    vTaskDelay(pdMS_TO_TICKS(500));
     Serial.print(".");
   }
   Serial.println();
