@@ -1,68 +1,4 @@
 let mqttClient;
-
-// window.addEventListener("load", (event) => {
-//   connectToBroker();
-//   // ---------- ADD: publish control messages + debug logs ----------
-// function publishControlMessage(message) {
-//   const topicInput = document.querySelector('#topic');
-//   const status = document.querySelector('#status');
-//   const topic = topicInput ? topicInput.value.trim() : '';
-
-//   console.log('[UI] publishControlMessage called, topic=', topic, 'message=', message);
-
-//   if (!topic) {
-//     alert('Vui lòng nhập topic (vd: test/esp32/control)');
-//     return;
-//   }
-//   if (!mqttClient) {
-//     alert('MQTT client chưa sẵn sàng.');
-//     return;
-//   }
-//   if (!mqttClient.connected()) {
-//     alert('MQTT client chưa kết nối. Đợi 1 lát rồi thử lại.');
-//     return;
-//   }
-
-//   mqttClient.publish(topic, message, {qos:0, retain:false}, (err) => {
-//     if (err) {
-//       console.error('[MQTT] Publish error:', err);
-//       if (status) { status.style.color = 'red'; status.value = 'PUBLISH ERROR'; }
-//     } else {
-//       console.log('[MQTT] Published:', message, '->', topic);
-//       if (status) { status.style.color = 'green'; status.value = 'PUBLISHED'; }
-//       setTimeout(()=>{ if (status) status.value = 'SUBSCRIBED'; }, 800);
-//     }
-//   });
-// }
-
-// // attach handlers (safe: after load)
-// window.addEventListener('load', () => {
-//   const btnOn = document.querySelector('#led_on');
-//   const btnOff = document.querySelector('#led_off');
-  
-//   if (btnOn) btnOn.addEventListener('click', () => {
-//     console.log('[UI] LED ON clicked');
-//     publishControlMessage('ON');
-//   });
-//   if (btnOff) btnOff.addEventListener('click', () => {
-//     console.log('[UI] LED OFF clicked');
-//     publishControlMessage('OFF');
-//   });
-// });
-
-
-//   const subscribeBtn = document.querySelector("#subscribe");
-//   subscribeBtn.addEventListener("click", function () {
-//     subscribeToTopic();
-//   });
-
-//   const unsubscribeBtn = document.querySelector("#unsubscribe");
-//   unsubscribeBtn.addEventListener("click", function () {
-//     unsubscribeToTopic();
-//   });
-// });
-
-// --- đặt trong cửa sổ load chính, thay cho phần nested load cũ ---
 window.addEventListener("load", (event) => {
   connectToBroker();
 
@@ -97,16 +33,7 @@ window.addEventListener("load", (event) => {
         if (status) { status.style.color = 'green'; status.value = 'PUBLISHED'; }
         setTimeout(()=>{ if (status) status.value = 'SUBSCRIBED'; }, 800);
       }
-      /* ------------------ AUTO CONTROL LOGIC (ADDED) ------------------
-   - Fan Auto -> controls pump01 (PUMP1_ON / PUMP1_OFF) based on temperature
-   - Pump Auto -> controls pump (PUMP_ON / PUMP_OFF) based on soil moisture
-   - Light Auto -> controls LED (ON / OFF) based on lux_status
-   - When an auto is ON, manual control attempts will show an English alert
-     (and the manual handlers are prevented from executing).
-   - This block uses the existing publishControlMessage(...) function.
-------------------------------------------------------------------*/
-
-// Auto state flags
+     
 let fanAuto = false;
 let pumpAuto = false;
 let lightAuto = false;
@@ -116,14 +43,12 @@ const fanAutoToggle = document.querySelector('#fan_auto_toggle');
 const pumpAutoToggle = document.querySelector('#pump_auto_toggle');
 const lightAutoToggle = document.querySelector('#light_auto_toggle');
 
-// helper: parse numeric from input text like "25.4 °C" or "60 %"
 function parseNumericLocal(str) {
   if (!str) return NaN;
   const m = String(str).match(/-?\d+(\.\d+)?/);
   return m ? parseFloat(m[0]) : NaN;
 }
 
-// update status display (single line summarizing auto modes)
 function updateAutoStatusUI() {
   const status = document.querySelector('#status');
   if (!status) return;
@@ -135,15 +60,16 @@ function updateAutoStatusUI() {
   status.style.color = (pumpAuto || fanAuto || lightAuto) ? 'green' : '#0b4f6c';
 }
 
-// evaluate and send control messages according to current sensor values
 function evaluateAutoControls(forceSend = false) {
   try {
     // temperature -> pump01 (fan)
     const tempVal = parseNumericLocal(document.querySelector('#temperature')?.value);
     if (!isNaN(tempVal) && fanAuto) {
-      if (tempVal >= 28) {
+      if (tempVal >= 32) {
         publishControlMessage('FAN_ON'); // fan -> pump01 on
-      } else { // temp < 30
+      } else if (tempVal <= 28) { 
+        publishControlMessage('FAN_OFF');
+      } else {
         publishControlMessage('FAN_OFF');
       }
     }
@@ -171,7 +97,6 @@ function evaluateAutoControls(forceSend = false) {
       } else if (luxVal > 50) {
         publishControlMessage('OFF'); // LED OFF
       } else {
-        // exact 60 -> treat as > = 60 => OFF per your spec (you said if <60 on, >60 off; equal considered ON for fan, for light spec you said <60 on and >60 off; ambiguous for equals, we use OFF when ==60)
         publishControlMessage('OFF');
       }
     }
@@ -180,7 +105,6 @@ function evaluateAutoControls(forceSend = false) {
   }
 }
 
-// When toggles change -> update flags, UI, and run evaluation once immediately
 if (fanAutoToggle) {
   fanAutoToggle.addEventListener('change', (e) => {
     fanAuto = !!e.target.checked;
@@ -203,7 +127,6 @@ if (lightAutoToggle) {
   });
 }
 
-// Prevent manual actions when auto mode is ON: add capture-phase listeners
 function installManualGuards() {
   // pump (primary)
   const pumpManualButtons = ['#pump_on', '#pump_off'];
@@ -248,8 +171,6 @@ function installManualGuards() {
 // run once now to install guards
 installManualGuards();
 
-// periodic evaluation (runs only when any auto mode enabled)
-// run every 2 seconds
 const autoInterval = setInterval(() => {
   if (pumpAuto || fanAuto || lightAuto) {
     evaluateAutoControls();
@@ -447,11 +368,6 @@ function unsubscribeToTopic() {
     status.value = "UNSUBSCRIBED";
   }
 }
-
-/* -------------------
-   CHARTS & TABLE CODE
-   (kept intact)
-   ------------------- */
 
 (function enableAreaFillWhenReady() {
   // try to apply after short delays until charts exist (max tries)
