@@ -14,7 +14,7 @@
     <header class="header">
       <div>
         <h1 class="title">🌿 Smart Garden Dashboard</h1>
-        <p class="subtitle">Khuyên - Ngân - Vũ</p>
+        <p class="subtitle">Khuyên - Ngân - Vũ - Thịnh - Trung</p>
       </div>
       <nav class="nav-tabs">
         <button id="tab-values" class="tab active">Values</button>
@@ -108,43 +108,57 @@
           <button id="unsubscribe">Unsubscribe</button>
         </div>
 
-        <!-- Row 2: LED ON / LED OFF  + PUMP01 ON/OFF + PUMP ON/OFF (đã thêm pump buttons) -->
-        <div class="form-row btn-container">
-          <button id="led_on">LED ON</button>
-          <button id="led_off">LED OFF</button>
+        <!-- Device Control Grid (Logically Grouped) -->
+        <div class="device-controls-grid">
+          <!-- Light Control -->
+          <div class="control-card">
+            <h4>💡 Light Control</h4>
+            <div class="control-row">
+              <label>Auto Mode</label>
+              <label class="switch">
+                <input id="light_auto_toggle" type="checkbox" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <button id="led_on">ON</button>
+              <button id="led_off">OFF</button>
+            </div>
+          </div>
 
-          <!-- ADDED: pump01 buttons (nằm cùng hàng với led buttons) -->
-          <button id="fan_on">FAN ON</button> <!-- ADDED -->
-          <button id="fan_off">FAN OFF</button> <!-- ADDED -->
+          <!-- Fan Control -->
+          <div class="control-card">
+            <h4>🌬️ Fan Control</h4>
+            <div class="control-row">
+              <label>Auto Mode</label>
+              <label class="switch">
+                <input id="fan_auto_toggle" type="checkbox" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <button id="fan_on">ON</button>
+              <button id="fan_off">OFF</button>
+            </div>
+          </div>
 
-          <!-- ADDED: pump buttons (nằm cùng hàng với led buttons) -->
-          <button id="pump_on">PUMP ON</button> <!-- ADDED -->
-          <button id="pump_off">PUMP OFF</button> <!-- ADDED -->
+          <!-- Pump Control -->
+          <div class="control-card">
+            <h4>💧 Pump Control</h4>
+            <div class="control-row">
+              <label>Auto Mode</label>
+              <label class="switch">
+                <input id="pump_auto_toggle" type="checkbox" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="control-row">
+              <button id="pump_on">ON</button>
+              <button id="pump_off">OFF</button>
+            </div>
+          </div>
         </div>
-        <!-- AUTO control row (ADD) -->
-<div class="form-row btn-container" id="auto_controls_row">
-  <!-- Fan auto controls (controls pump01 by temp) -->
-  <label style="width:auto; align-self:center; font-weight:700; color:#274463; margin-right:8px;">Fan Auto</label>
-  <label class="switch">
-    <input id="fan_auto_toggle" type="checkbox" />
-    <span class="slider"></span>
-  </label>
-
-  <!-- Pump auto (soil) -->
-  <label style="width:auto; align-self:center; font-weight:700; color:#274463; margin-left:12px; margin-right:8px;">Pump Auto</label>
-  <label class="switch">
-    <input id="pump_auto_toggle" type="checkbox" />
-    <span class="slider"></span>
-  </label>
-
-  <!-- Light auto (lux) -->
-  <label style="width:auto; align-self:center; font-weight:700; color:#274463; margin-left:12px; margin-right:8px;">Light Auto</label>
-  <label class="switch">
-    <input id="light_auto_toggle" type="checkbox" />
-    <span class="slider"></span>
-  </label>
-</div>
-<!-- /AUTO control row (ADD) -->
+        <!-- /Device Control Grid -->
 
       </section>
 
@@ -199,10 +213,8 @@
     </div>
   </div>
 
-  <!-- subscriber.js maintains MQTT connect & parsing -->
   <script src="subscriber.js"></script>
 
-  <!-- REPLACE the inline script that handles charts/table/storage with this block -->
 <script>
   // Tabs
   const tabValues = document.querySelector('#tab-values');
@@ -261,6 +273,30 @@
   const ctxHum = document.getElementById('chartHum').getContext('2d');
   const ctxLight = document.getElementById('chartLight').getContext('2d');
 
+  // Chart light mode options
+  const lightThemeOptions = {
+    responsive: true,
+    color: '#475569',
+    scales: {
+      x: { 
+        display: true, 
+        grid: { color: '#e2e8f0' },
+        ticks: { color: '#64748b' }
+      },
+      y: { 
+        beginAtZero: true,
+        grid: { color: '#e2e8f0' },
+        ticks: { color: '#64748b' }
+      }
+    },
+    plugins: {
+      legend: { labels: { color: '#475569' } }
+    }
+  };
+
+  const tempOptions = JSON.parse(JSON.stringify(lightThemeOptions));
+  tempOptions.scales.y.beginAtZero = false;
+
   // Temperature chart
   const chartTemp = new Chart(ctxTemp, {
     type: 'line',
@@ -269,18 +305,18 @@
       datasets: [{
         label: 'Temp (°C)',
         data: tempData,
-        borderColor: '#ff595e',
-        backgroundColor: 'rgba(255,89,94,0.12)',
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.15)',
         tension: 0.25,
         fill: true,
         pointRadius: 2,
         borderWidth: 2
       }]
     },
-    options: { responsive: true, scales: { x: { display: true }, y: { beginAtZero: false } } }
+    options: tempOptions
   });
 
-  // Humidity chart with two datasets: air (blue) and soil (brown)
+  // Humidity chart with two datasets: air (blue) and soil (gold)
   const chartHum = new Chart(ctxHum, {
     type: 'line',
     data: {
@@ -289,8 +325,8 @@
         {
           label: 'Air Humidity (%)',
           data: humAirData,
-          borderColor: '#2b8cff',
-          backgroundColor: 'rgba(43,140,255,0.12)',
+          borderColor: '#0ea5e9',
+          backgroundColor: 'rgba(14, 165, 233, 0.15)',
           tension: 0.25,
           fill: true,
           pointRadius: 2,
@@ -299,8 +335,8 @@
         {
           label: 'Soil Moisture (%)',
           data: soilData,
-          borderColor: '#8b5a2b',
-          backgroundColor: 'rgba(139,90,43,0.12)',
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.15)',
           tension: 0.25,
           fill: true,
           pointRadius: 2,
@@ -308,10 +344,10 @@
         }
       ]
     },
-    options: { responsive: true, scales: { x: { display: true }, y: { beginAtZero: true } } }
+    options: lightThemeOptions
   });
 
-  // Light chart (yellow)
+  // Light chart (purple/blue)
   const chartLight = new Chart(ctxLight, {
     type: 'line',
     data: {
@@ -319,15 +355,15 @@
       datasets: [{
         label: 'Light (lux_status)',
         data: luxData,
-        borderColor: '#f6c84c',
-        backgroundColor: 'rgba(246,200,76,0.12)',
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139, 92, 246, 0.15)',
         tension: 0.25,
         fill: true,
         pointRadius: 2,
         borderWidth: 2
       }]
     },
-    options: { responsive: true, scales: { x: { display: true }, y: { beginAtZero: true } } }
+    options: lightThemeOptions
   });
 
   // helper parse value from input like "25.4 °C" or "60 %" or plain number
@@ -464,8 +500,7 @@
     saveRecordToStorage(rec);
   }
 
-  // Push new points into charts (and maintain maxPoints)
-  // Accept tsFull (DD-MM-YY HH:mm:ss) and compute short label HH:mm for chart
+  
   function pushChartPoints(tsFull, tVal, hVal, soilVal, luxVal) {
     const shortLabel = shortLabelFromFullTs(tsFull);
     if (labels.length >= maxPoints) labels.shift();
@@ -500,40 +535,6 @@
     valEl.textContent = `${Math.round(p)}%`;
   }
 
-  // Called when new values arrive (either from MQTT parse or sampling)
-  /*window.handleNewIncomingData = function(triggerSource = 'mqtt') {
-    const t = parseNumericFromInput(document.querySelector('#temperature')?.value);
-    const h = parseNumericFromInput(document.querySelector('#humidity')?.value);
-    const soil = parseNumericFromInput(document.querySelector('#soil_moisture')?.value);
-    const lux = parseNumericFromInput(document.querySelector('#lux_status')?.value);
-
-    if (!isNaN(lux)) updateLuxGauge(lux);
-
-    function changed(a, b) {
-      if (a === null && b === null) return false;
-      if (a === null || b === null) return true;
-      if (isNaN(a) && isNaN(b)) return false;
-      if (isNaN(a) || isNaN(b)) return true;
-      return Math.abs(a - b) > 0.05;
-    }
-
-    const isChanged = changed(t, lastRecorded.t) || changed(h, lastRecorded.h) || changed(soil, lastRecorded.soil) || changed(lux, lastRecorded.lux);
-
-    if (isChanged) {
-      const tsFull = formatTimestamp(new Date()); // DD-MM-YY HH:mm:ss
-      addDataRow(tsFull, t, h, soil, lux);        // table shows full timestamp
-      pushChartPoints(tsFull, t, h, soil, lux);  // charts get short label HH:mm
-      lastRecorded.t = (isNaN(t)? null : t);
-      lastRecorded.h = (isNaN(h)? null : h);
-      lastRecorded.soil = (isNaN(soil)? null : soil);
-      lastRecorded.lux = (isNaN(lux)? null : lux);
-    }
-  };*/
-  // Called when new values arrive (either from MQTT parse or sampling)
-// Called when new values arrive (either from MQTT parse or sampling)
-// NOTE: This version records / updates the table & charts ONLY when called with 'sample' (or 'force'/'clear').
-// Incoming MQTT updates will still update the on-screen inputs and gauge, but will NOT append a data record
-// nor update the charts unless the sampler triggers it.
 window.handleNewIncomingData = function(triggerSource = 'mqtt') {
   // read current displayed values (these are updated by subscriber.js when MQTT arrives)
   const t = parseNumericFromInput(document.querySelector('#temperature')?.value);
@@ -568,33 +569,8 @@ window.handleNewIncomingData = function(triggerSource = 'mqtt') {
   }
   // If not sample tick, do nothing further: inputs updated by MQTT remain visible but no record is saved.
 };
-
-
-
-  // Sampling to update charts periodically (reads inputs)
-  /*let sampleTimer = null;
-  function startSampling(interval) {
-    if (sampleTimer) clearInterval(sampleTimer);
-    sampleTimer = setInterval(() => {
-      window.handleNewIncomingData('sample');
-    }, interval);
-  }
-
-  // init sampling from select
-  const sampleIntervalSelect = document.querySelector('#sampleInterval');
-  startSampling(parseInt(sampleIntervalSelect.value));
-  sampleIntervalSelect.addEventListener('change', (e) => {
-    startSampling(parseInt(e.target.value));
-  });*/
-  // --- Sampling (single global timer controlled by the select) ---
-/* Ensure sampleTimer lives in the outer scope so no duplicate timers are created */
+  
 let sampleTimer = null;
-
-/**
- * Start / restart sampling interval.
- * intervalMs must be a positive integer (milliseconds). If invalid, default to 5000.
- * This function always clears any previous sampling timer before creating a new one.
- */
 function startSampling(intervalMs) {
   try {
     // normalize
