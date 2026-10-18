@@ -33,7 +33,9 @@ Mô hình hệ thống IoT giám sát và tự động điều khiển vườn c
 
 ---
 
-##  Cấu trúc thư mục mã nguồn
+## Cấu trúc thư mục mã nguồn
+
+```text
 Nhom5_HTN/
 │
 ├── MQTT/
