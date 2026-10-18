@@ -30,6 +30,9 @@ Mô hình hệ thống IoT giám sát và tự động điều khiển vườn c
 [ Cảm biến ánh sáng ] ──┘          │                         │
                                    ├──> [ Relay & Thiết bị ] ──> (Máy bơm, Quạt, Đèn)
                                    └──> [ Giao thức MQTT   ] ──> [ Web Dashboard ]
+
+---
+
 ##  Cấu trúc thư mục mã nguồn
 Nhom5_HTN/
 │
