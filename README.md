@@ -1,6 +1,6 @@
 # Smart Garden IoT System (Hệ thống Vườn cây Thông minh)
 
-Mô hình hệ thống IoT giám sát và tự động điều khiển vườn cây thông minh sử dụng vi điều khiển ESP32, giao thức truyền thông MQTT và giao diện Web Dashboard theo thời gian thực.
+Mô hình hệ thống IoT giám sát và tự động điều khiển vườn cây thông minh sử dụng vi điều khiển ESP32, giao thức truyền thông MQTT và giao diện Web Dashboard theo thời gian thực[cite: 7, 8, 11].
 
 ---
 
@@ -23,15 +23,29 @@ Mô hình hệ thống IoT giám sát và tự động điều khiển vườn c
 
 ---
 
-## Sơ đồ khối & Cấu trúc thư mục
+## 🖼️ Hình ảnh mô hình thực tế
+
+<!-- DÁN ĐOẠN MÃ ẢNH MÔ HÌNH VÀO DƯỚI DÒNG NÀY --> <img width="966" height="528" alt="Báo cáo HTN" src="https://github.com/user-attachments/assets/fb702820-22f6-4764-a5ff-71448014f17d" />
+![Mô hình thực tế](DÁN_LINK_ẢNH_MÔ_HÌNH_VÀO_ĐÂY)
+
+---
+
+## 📊 Giao diện Web Dashboard
+
+<!-- DÁN ĐOẠN MÃ ẢNH DASHBOARD VÀO DƯỚI DÒNG NÀY --> <img width="690" height="450" alt="Báo cáo HTN (1)" src="https://github.com/user-attachments/assets/0c4c087c-556c-4fb3-8ccf-2af937fa25e5" />
+![Web Dashboard](DÁN_LINK_ẢNH_DASHBOARD_VÀO_ĐÂY)
+
+---
+
+## Sơ đồ khối hệ thống
 
 ```text
-
 [ Cảm biến độ ẩm đất ] ──┐
 [ Cảm biến DHT11    ] ──┼──> [ Vi điều khiển ESP32 ] ──> [ Màn hình LCD 16x2 ]
 [ Cảm biến ánh sáng ] ──┘          │                         │
                                    ├──> [ Relay & Thiết bị ] ──> (Máy bơm, Quạt, Đèn)
                                    └──> [ Giao thức MQTT   ] ──> [ Web Dashboard ]
+# Smart Garden IoT System (Hệ thống Vườn cây Thông minh)
 
 
 Nhom5_HTN/
