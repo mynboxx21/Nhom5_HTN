@@ -25,19 +25,19 @@ Mô hình hệ thống IoT giám sát và tự động điều khiển vườn c
 
 ## 🖼️ Hình ảnh mô hình thực tế
 
-<!-- DÁN ĐOẠN MÃ ẢNH MÔ HÌNH VÀO DƯỚI DÒNG NÀY --> <img width="966" height="528" alt="Báo cáo HTN" src="https://github.com/user-attachments/assets/fb702820-22f6-4764-a5ff-71448014f17d" />
+<!-- DÁN ĐOẠN MÃ ẢNH MÔ HÌNH VÀO DƯỚI DÒNG NÀY --> <img width="690" height="450" alt="Báo cáo HTN (1)" src="https://github.com/user-attachments/assets/0c4c087c-556c-4fb3-8ccf-2af937fa25e5" />
 ![Mô hình thực tế](DÁN_LINK_ẢNH_MÔ_HÌNH_VÀO_ĐÂY)
 
 ---
 
 ## 📊 Giao diện Web Dashboard
 
-<!-- DÁN ĐOẠN MÃ ẢNH DASHBOARD VÀO DƯỚI DÒNG NÀY --> <img width="690" height="450" alt="Báo cáo HTN (1)" src="https://github.com/user-attachments/assets/0c4c087c-556c-4fb3-8ccf-2af937fa25e5" />
+<!-- DÁN ĐOẠN MÃ ẢNH DASHBOARD VÀO DƯỚI DÒNG NÀY --> <img width="966" height="528" alt="Báo cáo HTN" src="https://github.com/user-attachments/assets/fb702820-22f6-4764-a5ff-71448014f17d" /> 
 ![Web Dashboard](DÁN_LINK_ẢNH_DASHBOARD_VÀO_ĐÂY)
 
 ---
 
-## Sơ đồ khối hệ thống
+## Sơ đồ khối hệ thống và cấu trúc thư mục mã nguồn
 
 ```text
 [ Cảm biến độ ẩm đất ] ──┐
